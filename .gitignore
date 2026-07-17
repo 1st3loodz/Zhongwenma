@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# SQLite local database (do not commit — use Turso for production)
+vocab.db
+
+# Environment files (contains secrets)
+.env.local
+.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/

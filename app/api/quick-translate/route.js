@@ -1,0 +1,88 @@
+import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { initDb } from '../../../lib/db';
+
+// ─── Prompt ─────────────────────────────────────────────────────────────
+const buildPrompt = (text) => `
+You are a Chinese language expert for learners. Analyze the input below and return a comprehensive translation breakdown.
+
+Input: "${text}"
+
+Return ONLY a valid JSON object (no markdown code blocks, no extra text):
+{
+  "detected_language": "English | Thai | Pinyin | Chinese",
+  "pinyin": "full pinyin with proper tone marks (ā á ǎ à style)",
+  "hanzi": "simplified Chinese characters",
+  "translation_en": "clear English translation/meaning",
+  "translation_th": "Thai translation",
+  "breakdown": [
+    { "pinyin": "nǐ", "hanzi": "你", "meaning_en": "you" },
+    { "pinyin": "hǎo", "hanzi": "好", "meaning_en": "good / well" }
+  ]
+}
+
+Rules:
+- If input is English or Thai → find the most natural Chinese equivalent
+- If input is Hanzi → provide pinyin and both translations
+- If input is Pinyin → confirm hanzi and provide translations
+- Always use proper tone marks (ā á ǎ à, ē é ě è, ī í ǐ ì, ō ó ǒ ò, ū ú ǔ ù)
+- breakdown should have one entry per individual Chinese vocabulary word found in the input
+- Return ONLY the JSON object
+`.trim();
+
+// ─── Handler ─────────────────────────────────────────────────────────────
+export async function POST(request) {
+  try {
+    const { userInput } = await request.json();
+    if (!userInput?.trim()) {
+      return NextResponse.json({ error: 'No input provided' }, { status: 400 });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Try models in order with exponential back-off ─────────────────────
+    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let lastError;
+
+    for (const modelName of MODELS) {
+      try {
+        const model  = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(buildPrompt(userInput.trim()));
+        let raw = result.response.text().trim();
+
+        // Strip accidental markdown fences
+        raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+        const parsed = JSON.parse(raw);
+
+        // Normalise breakdown to always be an array
+        if (!Array.isArray(parsed.breakdown)) parsed.breakdown = [];
+
+        // Check against local database
+        const db = await initDb();
+        for (const item of parsed.breakdown) {
+          const row = await db.get('SELECT id FROM vocab_cards WHERE hanzi = ?', [item.hanzi]);
+          item.inBank = !!row;
+        }
+
+        return NextResponse.json(parsed);
+      } catch (err) {
+        lastError = err;
+        // Try next model
+      }
+    }
+
+    throw lastError;
+  } catch (err) {
+    console.error('[quick-translate] error:', err);
+    return NextResponse.json(
+      { error: err.message || 'Translation failed. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
