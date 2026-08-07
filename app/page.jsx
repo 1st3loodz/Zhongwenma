@@ -8,12 +8,13 @@ const TABS = { ADD: 'add', CARDS: 'cards', BANK: 'bank', TRANSLATE: 'translate' 
 
 // ─── Shared Helpers ───────────────────────────────────────────────────
 
-/** Normalise a raw DB row so no V2/V2.5 field is ever undefined */
+/** Normalise a raw DB row so no V2/V2.5/V2.8 field is ever undefined */
 function normaliseCard(row) {
   if (!row) return null;
   return {
     ...row,
     word_type: row.word_type || null,
+    hsk_level: row.hsk_level || null,
     example_sentence_translation_en:
       row.example_sentence_translation_en
       || row.example_sentence_translation
@@ -55,6 +56,16 @@ function shuffleArray(arr) {
 function WordTypeBadge({ type }) {
   if (!type) return null;
   return <span className={`word-type-badge wt-${type}`}>{type}</span>;
+}
+
+/** Color-coded HSK level badge */
+function HskBadge({ level }) {
+  if (!level) return null;
+  const tier = level === 'HSK 1' || level === 'HSK 2' ? 'hsk-green'
+    : level === 'HSK 3' || level === 'HSK 4' ? 'hsk-orange'
+    : level === 'HSK 5' || level === 'HSK 6' ? 'hsk-purple'
+    : 'hsk-gray'; // Non-HSK
+  return <span className={`hsk-badge ${tier}`}>{level}</span>;
 }
 
 // ─── Tab 1: Add Words ──────────────────────────────────────────────────
@@ -159,7 +170,10 @@ function AddWordsTab({ onCardAdded }) {
                 <tr key={w.id || i}>
                   <td>
                     <div className="cell-pinyin">{w.pinyin}</div>
-                    <div className="cell-hanzi">{w.hanzi}</div>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+                      <div className="cell-hanzi">{w.hanzi}</div>
+                      {w.hsk_level && <HskBadge level={w.hsk_level} />}
+                    </div>
                   </td>
                   <td>
                     <div className="cell-en">{w.translation_en}</div>
@@ -482,6 +496,7 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
             <>
               <div className="back-meta-row">
                 <WordTypeBadge type={currentCard.word_type} />
+                {currentCard.hsk_level && <HskBadge level={currentCard.hsk_level} />}
                 <span className="card-badge" style={{ fontSize: '9px' }}>🎲 Practice</span>
               </div>
 
@@ -803,9 +818,10 @@ function VocabBankTab() {
                     </td>
                     <td>
                       <div className="bank-pinyin">{w.pinyin}</div>
-                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '3px', flexWrap: 'wrap' }}>
                         <div className="bank-hanzi">{w.hanzi}</div>
                         {w.word_type && <WordTypeBadge type={w.word_type} />}
+                        {w.hsk_level && <HskBadge level={w.hsk_level} />}
                       </div>
                     </td>
                     <td>

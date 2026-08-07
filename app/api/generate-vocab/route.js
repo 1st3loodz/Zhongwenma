@@ -8,6 +8,7 @@ const MAX_RETRIES = 3;
 
 // Valid word types — used to sanitize Gemini output
 const VALID_WORD_TYPES = ['Noun', 'Verb', 'Adj', 'Adv', 'Phrase', 'Particle', 'Numeral', 'Pronoun', 'Other'];
+const VALID_HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'Non-HSK'];
 
 async function callGeminiWithRetry(genAI, userInput) {
   const prompt = `
@@ -23,11 +24,15 @@ async function callGeminiWithRetry(genAI, userInput) {
        Noun | Verb | Adj | Adv | Phrase | Particle | Numeral | Pronoun | Other
     4. Generate exactly ONE short, practical, daily-life conversational example sentence in Pinyin.
     5. Translate that example sentence into BOTH English AND Thai.
+    6. Identify the HSK level of the word using EXACTLY one of these values:
+       HSK 1 | HSK 2 | HSK 3 | HSK 4 | HSK 5 | HSK 6 | Non-HSK
+       (Use "Non-HSK" if the word does not appear in the official HSK vocabulary lists)
 
     CRITICAL RULES:
     - Always respond with valid JSON only. No markdown, no code fences, no extra text.
     - All string values must be properly escaped UTF-8.
     - "word_type" must be exactly one of the values listed above.
+    - "hsk_level" must be exactly one of: HSK 1, HSK 2, HSK 3, HSK 4, HSK 5, HSK 6, Non-HSK
     - If the input functions as multiple parts of speech (e.g., both a Noun and a Verb), return separate entries for each type.
     - "translation_th" must be in Thai script.
     - "translation_en" must be in English.
@@ -41,6 +46,7 @@ async function callGeminiWithRetry(genAI, userInput) {
         "pinyin": "string",
         "hanzi": "string",
         "word_type": "string",
+        "hsk_level": "string",
         "translation_th": "string",
         "translation_en": "string",
         "example_sentence_pinyin": "string",
@@ -136,22 +142,27 @@ export async function POST(request) {
         ? item.word_type
         : 'Other';
 
+      // Sanitize hsk_level
+      const hskLevel = VALID_HSK_LEVELS.includes(item.hsk_level)
+        ? item.hsk_level
+        : 'Non-HSK';
+
       const nextReviewDate = new Date();
       nextReviewDate.setDate(nextReviewDate.getDate() + 1);
       const id = crypto.randomUUID();
 
       await db.run(`
         INSERT INTO vocab_cards (
-          id, user_input, pinyin, hanzi, word_type,
+          id, user_input, pinyin, hanzi, word_type, hsk_level,
           translation_th, translation_en,
           example_sentence_pinyin,
           example_sentence_translation_en,
           example_sentence_translation_th,
           next_review_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         id, userInput,
-        item.pinyin, item.hanzi, wordType,
+        item.pinyin, item.hanzi, wordType, hskLevel,
         item.translation_th, item.translation_en,
         item.example_sentence_pinyin,
         item.example_sentence_translation_en,
