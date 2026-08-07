@@ -62,6 +62,7 @@ function AddWordsTab({ onCardAdded }) {
   const [inputValue, setInputValue] = useState('');
   const [isSubmitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const [recentWords, setRecentWords] = useState([]);
 
   const loadRecent = useCallback(async () => {
@@ -81,6 +82,7 @@ function AddWordsTab({ onCardAdded }) {
     if (!inputValue.trim()) return;
     setSubmitting(true);
     setErrorMsg('');
+    setIsDuplicate(false);
     try {
       const res = await fetch('/api/generate-vocab', {
         method: 'POST',
@@ -88,6 +90,15 @@ function AddWordsTab({ onCardAdded }) {
         body: JSON.stringify({ userInput: inputValue }),
       });
       const data = await res.json();
+
+      // 409 = duplicate word — show a warning, not an error
+      if (res.status === 409) {
+        setIsDuplicate(true);
+        setErrorMsg(data.error || 'Word already exists in your vocabulary bank!');
+        setTimeout(() => { setIsDuplicate(false); setErrorMsg(''); }, 4000);
+        return;
+      }
+
       if (!res.ok) throw new Error(data.error || 'API failed');
       const newCards = (Array.isArray(data) ? data : [data]).map(normaliseCard);
       setRecentWords(prev => [...newCards, ...prev].slice(0, 5));
@@ -124,7 +135,12 @@ function AddWordsTab({ onCardAdded }) {
         </div>
       </div>
 
-      {errorMsg && <div className="error-banner">⚠️ {errorMsg}</div>}
+      {isDuplicate && (
+        <div className="duplicate-banner">
+          📚 <strong>Already in your bank!</strong> {errorMsg}
+        </div>
+      )}
+      {!isDuplicate && errorMsg && <div className="error-banner">⚠️ {errorMsg}</div>}
 
       <div className="recent-card">
         <h3>📋 Last 5 Added</h3>

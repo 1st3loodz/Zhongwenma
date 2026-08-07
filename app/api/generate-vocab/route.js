@@ -81,6 +81,28 @@ export async function POST(request) {
     console.log(`Processing input: "${userInput}"...`);
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    // ── Pre-check: does this hanzi already exist? ────────────────────────────
+    // We do a quick DB lookup BEFORE calling Gemini to conserve API quota.
+    // The input could be Hanzi, Pinyin, Thai, or English — we check all text
+    // fields so common duplicate attempts are caught regardless of input language.
+    const db = await initDb();
+    const trimmedInput = userInput.trim();
+    const existing = await db.get(
+      `SELECT id, pinyin, hanzi, translation_en FROM vocab_cards
+       WHERE hanzi = ? OR pinyin = ? OR LOWER(user_input) = LOWER(?)
+       LIMIT 1`,
+      [trimmedInput, trimmedInput, trimmedInput]
+    );
+
+    if (existing) {
+      console.log(`[Duplicate] "${trimmedInput}" already exists as ${existing.hanzi} (${existing.pinyin})`);
+      return Response.json(
+        { error: 'Word already exists in your vocabulary bank!', duplicate: true, existing },
+        { status: 409 }
+      );
+    }
+
     const responseText = await callGeminiWithRetry(genAI, userInput);
 
     let generatedData;
@@ -96,7 +118,7 @@ export async function POST(request) {
     const dataArray = Array.isArray(generatedData) ? generatedData : [generatedData];
     const insertedCards = [];
 
-    const db = await initDb();
+    // db is already initialized above (for the duplicate check)
     
     // Process each object in the array
     for (const item of dataArray) {

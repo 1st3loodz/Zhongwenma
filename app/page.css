@@ -338,6 +338,24 @@ body {
   border-radius: 5px; padding: 2px 7px; font-weight: 600; font-size: 10px;
 }
 
+/* ─── Status Banners (Tab 1) ──────────────────────────────────────── */
+.error-banner {
+  background: var(--red-bg); color: var(--red);
+  border: 1px solid var(--red); border-radius: var(--radius-sm);
+  padding: 10px 13px; font-size: 13px; font-weight: 600;
+  animation: bannerFadeIn 0.2s ease;
+}
+.duplicate-banner {
+  background: var(--amber-bg); color: var(--amber-text);
+  border: 1px solid var(--amber-text); border-radius: var(--radius-sm);
+  padding: 10px 13px; font-size: 13px; font-weight: 600;
+  animation: bannerFadeIn 0.2s ease;
+}
+@keyframes bannerFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ─── Recent Words Card (Tab 1) ───────────────────────────────────── */
 .recent-card {
   background: var(--card); border-radius: var(--radius-md);
