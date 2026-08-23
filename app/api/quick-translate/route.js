@@ -25,7 +25,9 @@ Rules:
 - If input is English or Thai → find the most natural Chinese equivalent
 - If input is Hanzi → provide pinyin and both translations
 - If input is Pinyin → confirm hanzi and provide translations
-- Always use proper tone marks (ā á ǎ à, ē é ě è, ī í ǐ ì, ō ó ǒ ò, ū ú ǔ ù)
+- CRITICAL for Pinyin: Use precomposed Unicode characters ONLY (e.g. ā á ǎ à, ē é ě è, ī í ǐ ì, ō ó ǒ ò, ū ú ǔ ù, ǖ ǘ ǚ ǜ).
+- NEVER split a tone mark from its vowel with a space (e.g. "yo ˇ u" is WRONG; "yǒu" is CORRECT).
+- Use exactly ONE space between syllables. No leading or trailing spaces.
 - breakdown should have one entry per individual Chinese vocabulary word found in the input
 - Return ONLY the JSON object
 `.trim();

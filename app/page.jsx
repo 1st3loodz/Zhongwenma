@@ -53,6 +53,17 @@ function shuffleArray(arr) {
   return a;
 }
 
+/**
+ * Normalize a Pinyin string for safe rendering:
+ *   1. NFC-normalize so combining diacritics are precomposed (ǒ, not o + ˇ).
+ *   2. Collapse multiple whitespace chars into a single space.
+ *   3. Trim leading/trailing whitespace.
+ */
+function normalizePinyin(str) {
+  if (!str) return '';
+  return str.normalize('NFC').replace(/\s+/g, ' ').trim();
+}
+
 /** Small coloured badge for word type */
 function WordTypeBadge({ type }) {
   if (!type) return null;
@@ -74,11 +85,12 @@ function HskBadge({ level }) {
  * Handles legacy rows that only have Pinyin (no Hanzi) gracefully.
  */
 function ExampleSentenceBlock({ pinyin, hanzi, translationEn, translationTh, compact = false }) {
-  if (!pinyin && !hanzi) return null;
+  const cleanPinyin = normalizePinyin(pinyin);
+  if (!cleanPinyin && !hanzi) return null;
   return (
     <div className={`example-block ${compact ? 'example-block-compact' : ''}`}>
-      {pinyin && (
-        <div className="example-block-pinyin">{pinyin}</div>
+      {cleanPinyin && (
+        <div className="example-block-pinyin">{cleanPinyin}</div>
       )}
       {hanzi && (
         <div className="example-block-hanzi">{hanzi}</div>
@@ -204,7 +216,7 @@ function AddWordsTab({ onCardAdded }) {
               {recentWords.map((w, i) => (
                 <tr key={w.id || i}>
                   <td>
-                    <div className="cell-pinyin">{w.pinyin}</div>
+                    <div className="cell-pinyin">{normalizePinyin(w.pinyin)}</div>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
                       <div className="cell-hanzi">{w.hanzi}</div>
                       {w.hsk_level && <HskBadge level={w.hsk_level} />}
@@ -535,7 +547,7 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
                 <span className="card-badge" style={{ fontSize: '9px' }}>🎲 Practice</span>
               </div>
 
-              <div className="pinyin-main">{currentCard.pinyin}</div>
+              <div className="pinyin-main">{normalizePinyin(currentCard.pinyin)}</div>
               <div className="hanzi-secondary">{currentCard.hanzi}</div>
               <div className="divider" />
 
@@ -603,7 +615,7 @@ function DetailModal({ card, firstCardDate, onClose }) {
         <div className="modal-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <div className="modal-pinyin">{card.pinyin}</div>
+              <div className="modal-pinyin">{normalizePinyin(card.pinyin)}</div>
               <WordTypeBadge type={card.word_type} />
             </div>
             <div className="modal-hanzi">{card.hanzi}</div>
@@ -839,7 +851,7 @@ function VocabBankTab() {
                       />
                     </td>
                     <td>
-                      <div className="bank-pinyin">{w.pinyin}</div>
+                      <div className="bank-pinyin">{normalizePinyin(w.pinyin)}</div>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '3px', flexWrap: 'wrap' }}>
                         <div className="bank-hanzi">{w.hanzi}</div>
                         {w.word_type && <WordTypeBadge type={w.word_type} />}
@@ -1012,7 +1024,7 @@ function QuickTranslateTab({ onCardAdded }) {
             <div className="qt-breakdown">
               {result.breakdown.map((item, i) => (
                 <div key={i} className="qt-char-block">
-                  <div className="qt-char-pinyin">{item.pinyin}</div>
+                  <div className="qt-char-pinyin">{normalizePinyin(item.pinyin)}</div>
                   <div className="qt-char-hanzi">{item.hanzi}</div>
                   <div className="qt-char-meaning">{item.meaning_en}</div>
                   
@@ -1037,7 +1049,7 @@ function QuickTranslateTab({ onCardAdded }) {
           {/* Full Pinyin */}
           <div className="qt-row">
             <div className="qt-row-label">Pinyin</div>
-            <div className="qt-pinyin-full">{result.pinyin}</div>
+            <div className="qt-pinyin-full">{normalizePinyin(result.pinyin)}</div>
           </div>
 
           {/* Hanzi */}

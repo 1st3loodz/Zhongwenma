@@ -131,7 +131,7 @@
 
 /* Secondary / label text elevated for readability */
 [data-theme="dark"] .example-label    { color: #94a3b8; }
-[data-theme="dark"] .example-pinyin   { color: #cbd5e1; }
+[data-theme="dark"] .example-pinyin   { color: #94a3b8; font-style: normal; }
 [data-theme="dark"] .back-meta-row .card-badge { background: #271400; color: #ff8c00; }
 [data-theme="dark"] .divider           { background: #334155; }
 
@@ -584,7 +584,11 @@ body {
   font-size: 9px; font-weight: 700; color: var(--gray);
   text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;
 }
-.example-pinyin { font-size: 15px; font-weight: 600; color: var(--mid); line-height: 1.6; font-style: italic; }
+.example-pinyin {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px; font-weight: 400; font-style: normal;
+  color: var(--mid); line-height: 1.6; letter-spacing: 0.04em; word-spacing: 0.1em;
+}
 .pinyin-main {
   font-size: 42px; font-weight: 900; color: var(--orange);
   line-height: 1.15; margin-bottom: 6px; letter-spacing: -1px;
@@ -601,19 +605,31 @@ body {
 }
 .example-block-compact { padding: 8px 12px; margin-top: 6px; }
 .example-block-pinyin {
-  font-size: 13px; font-weight: 600; font-style: italic;
-  color: var(--mid); line-height: 1.55; margin-bottom: 4px;
-  font-family: 'Noto Serif', Georgia, serif;
-  letter-spacing: 0.01em;
+  /* Clean sans-serif with excellent Unicode diacritic support. */
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px; font-weight: 400; font-style: normal; /* text-sm font-normal */
+  color: var(--gray); /* slate-400 */
+  line-height: 1.5; margin-bottom: 0;
+  letter-spacing: 0.025em; /* tracking-wide */
 }
 .example-block-hanzi {
-  font-size: 17px; font-weight: 700; color: var(--dark);
-  line-height: 1.4; margin-bottom: 8px;
-  letter-spacing: 0.04em;
+  font-size: 18px; font-weight: 600; /* text-lg font-semibold */
+  color: var(--dark); /* slate-100 */
+  line-height: 1.4; margin-top: 2px; /* mt-0.5 */
+  margin-bottom: 0;
+  letter-spacing: normal; /* tracking-normal */
 }
-.example-block-translations { display: flex; flex-direction: column; gap: 4px; }
+.example-block-translations {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 4px; /* mt-1 */
+}
+.example-block-translations .trans-text {
+  font-size: 12px; /* text-xs */
+  color: var(--gray); /* text-slate-400 */
+}
 [data-theme="dark"] .example-block-pinyin { color: #94a3b8; }
 [data-theme="dark"] .example-block-hanzi  { color: #f1f5f9; }
+[data-theme="dark"] .example-block-translations .trans-text { color: #94a3b8; }
 
 .example-translations {
   background: var(--bg); border-radius: var(--radius-sm); padding: 12px 14px; text-align: left;
@@ -798,8 +814,10 @@ body {
 .modal-meaning-row:last-child { margin-bottom: 0; }
 .modal-meaning-text { font-size: 15px; color: var(--dark); font-weight: 500; }
 .modal-example-pinyin {
-  font-size: 14px; font-weight: 600; color: var(--mid);
-  font-style: italic; line-height: 1.6; margin-bottom: 10px;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px; font-weight: 400; font-style: normal;
+  color: var(--mid); line-height: 1.6; margin-bottom: 10px;
+  letter-spacing: 0.04em; word-spacing: 0.1em;
 }
 .modal-trans-row { display: flex; gap: 7px; align-items: flex-start; margin-bottom: 5px; }
 .modal-trans-row:last-child { margin-bottom: 0; }
