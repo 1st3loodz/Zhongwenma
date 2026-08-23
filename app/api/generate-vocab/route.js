@@ -25,7 +25,8 @@ async function callGeminiWithRetry(genAI, userInput) {
     2. Provide the standard Mandarin Chinese information for that concept.
     3. Classify the word type using EXACTLY one of these values:
        Noun | Verb | Adj | Adv | Phrase | Particle | Numeral | Pronoun | Other
-    4. Generate exactly ONE short, practical, daily-life conversational example sentence in Pinyin.
+    4. Generate exactly ONE short, practical, daily-life conversational example sentence.
+       - Provide it in TWO forms: full Pinyin (with tone marks) AND Chinese Hanzi characters.
     5. Translate that example sentence into BOTH English AND Thai.
     6. Identify the HSK level of the word using EXACTLY one of these values:
        HSK 1 | HSK 2 | HSK 3 | HSK 4 | HSK 5 | HSK 6 | Non-HSK
@@ -40,6 +41,7 @@ async function callGeminiWithRetry(genAI, userInput) {
     - "translation_th" must be in Thai script.
     - "translation_en" must be in English.
     - "pinyin" and "example_sentence_pinyin" must use standard Pinyin with tone marks (e.g. nǐ hǎo).
+    - "example_sentence_hanzi" must be the full Chinese sentence written in Hanzi characters.
     - "example_sentence_translation_en" must be the English translation of the example sentence.
     - "example_sentence_translation_th" must be the Thai translation of the example sentence.
 
@@ -53,6 +55,7 @@ async function callGeminiWithRetry(genAI, userInput) {
         "translation_th": "string",
         "translation_en": "string",
         "example_sentence_pinyin": "string",
+        "example_sentence_hanzi": "string",
         "example_sentence_translation_en": "string",
         "example_sentence_translation_th": "string"
       }
@@ -142,6 +145,7 @@ export async function POST(request) {
       const requiredFields = [
         'pinyin', 'hanzi', 'word_type', 'translation_th', 'translation_en',
         'example_sentence_pinyin', 'example_sentence_translation_en', 'example_sentence_translation_th'
+        // example_sentence_hanzi is validated softly below (optional fallback for older responses)
       ];
       for (const field of requiredFields) {
         if (!item[field]) throw new Error(`Missing field in Gemini response: "${field}"`);
@@ -157,6 +161,9 @@ export async function POST(request) {
         ? item.hsk_level
         : 'Non-HSK';
 
+      // example_sentence_hanzi: required by prompt but graceful fallback if absent
+      const exHanzi = item.example_sentence_hanzi || '';
+
       const nextReviewDate = new Date();
       nextReviewDate.setDate(nextReviewDate.getDate() + 1);
       const id = crypto.randomUUID();
@@ -166,15 +173,17 @@ export async function POST(request) {
           id, user_input, pinyin, hanzi, word_type, hsk_level,
           translation_th, translation_en,
           example_sentence_pinyin,
+          example_sentence_hanzi,
           example_sentence_translation_en,
           example_sentence_translation_th,
           next_review_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         id, userInput,
         item.pinyin, item.hanzi, wordType, hskLevel,
         item.translation_th, item.translation_en,
         item.example_sentence_pinyin,
+        exHanzi,
         item.example_sentence_translation_en,
         item.example_sentence_translation_th,
         nextReviewDate.toISOString()

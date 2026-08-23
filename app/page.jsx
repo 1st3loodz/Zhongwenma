@@ -8,13 +8,14 @@ const TABS = { ADD: 'add', CARDS: 'cards', BANK: 'bank', TRANSLATE: 'translate' 
 
 // ─── Shared Helpers ───────────────────────────────────────────────────
 
-/** Normalise a raw DB row so no V2/V2.5/V2.8 field is ever undefined */
+/** Normalise a raw DB row so no V2/V2.5/V2.8/V2.9 field is ever undefined */
 function normaliseCard(row) {
   if (!row) return null;
   return {
     ...row,
     word_type: row.word_type || null,
     hsk_level: row.hsk_level || null,
+    example_sentence_hanzi: row.example_sentence_hanzi || null,
     example_sentence_translation_en:
       row.example_sentence_translation_en
       || row.example_sentence_translation
@@ -66,6 +67,40 @@ function HskBadge({ level }) {
     : level === 'HSK 5' || level === 'HSK 6' ? 'hsk-purple'
     : 'hsk-gray'; // Non-HSK
   return <span className={`hsk-badge ${tier}`}>{level}</span>;
+}
+
+/**
+ * Renders an example sentence with Pinyin on top, Hanzi below, then translations.
+ * Handles legacy rows that only have Pinyin (no Hanzi) gracefully.
+ */
+function ExampleSentenceBlock({ pinyin, hanzi, translationEn, translationTh, compact = false }) {
+  if (!pinyin && !hanzi) return null;
+  return (
+    <div className={`example-block ${compact ? 'example-block-compact' : ''}`}>
+      {pinyin && (
+        <div className="example-block-pinyin">{pinyin}</div>
+      )}
+      {hanzi && (
+        <div className="example-block-hanzi">{hanzi}</div>
+      )}
+      {(translationEn || translationTh) && (
+        <div className="example-block-translations">
+          {translationEn && (
+            <div className="trans-row">
+              <span className="lang-pill lang-en">EN</span>
+              <span className="trans-text">{translationEn}</span>
+            </div>
+          )}
+          {translationTh && (
+            <div className="trans-row">
+              <span className="lang-pill lang-th">TH</span>
+              <span className="trans-text">{translationTh}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Tab 1: Add Words ──────────────────────────────────────────────────
@@ -505,18 +540,12 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
               <div className="divider" />
 
               <div className="example-label">Example Sentence</div>
-              <div className="example-pinyin">"{currentCard.example_sentence_pinyin}"</div>
-
-              <div className="example-translations" style={{ marginTop: '10px' }}>
-                <div className="trans-row">
-                  <span className="lang-pill lang-en">EN</span>
-                  <span className="trans-text">{currentCard.example_sentence_translation_en || '—'}</span>
-                </div>
-                <div className="trans-row">
-                  <span className="lang-pill lang-th">TH</span>
-                  <span className="trans-text">{currentCard.example_sentence_translation_th || '—'}</span>
-                </div>
-              </div>
+              <ExampleSentenceBlock
+                pinyin={currentCard.example_sentence_pinyin}
+                hanzi={currentCard.example_sentence_hanzi}
+                translationEn={currentCard.example_sentence_translation_en}
+                translationTh={currentCard.example_sentence_translation_th}
+              />
             </>
           )}
         </div>
@@ -599,22 +628,15 @@ function DetailModal({ card, firstCardDate, onClose }) {
           {/* Example sentence */}
           <div className="modal-section">
             <div className="modal-section-label">✦ Example Sentence</div>
-            <div className="modal-example-pinyin">
-              "{card.example_sentence_pinyin || '—'}"
-            </div>
-            {(card.example_sentence_translation_en || card.example_sentence_translation_th) ? (
-              <>
-                <div className="modal-trans-row">
-                  <span className="lang-pill lang-en">EN</span>
-                  <span className="modal-trans-text">{card.example_sentence_translation_en || '—'}</span>
-                </div>
-                <div className="modal-trans-row">
-                  <span className="lang-pill lang-th">TH</span>
-                  <span className="modal-trans-text">{card.example_sentence_translation_th || '—'}</span>
-                </div>
-              </>
+            {card.example_sentence_pinyin ? (
+              <ExampleSentenceBlock
+                pinyin={card.example_sentence_pinyin}
+                hanzi={card.example_sentence_hanzi}
+                translationEn={card.example_sentence_translation_en}
+                translationTh={card.example_sentence_translation_th}
+              />
             ) : (
-              <p className="modal-no-data">Translations not available for this legacy entry.</p>
+              <p className="modal-no-data">No example sentence for this entry.</p>
             )}
           </div>
 

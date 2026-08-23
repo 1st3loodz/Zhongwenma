@@ -594,6 +594,27 @@ body {
 
 .meaning-en { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 2px; }
 .meaning-th { font-size: 14px; color: var(--mid); }
+/* ─── ExampleSentenceBlock ────────────────────────────────────────── */
+.example-block {
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 11px 14px; margin-top: 8px; text-align: left;
+}
+.example-block-compact { padding: 8px 12px; margin-top: 6px; }
+.example-block-pinyin {
+  font-size: 13px; font-weight: 600; font-style: italic;
+  color: var(--mid); line-height: 1.55; margin-bottom: 4px;
+  font-family: 'Noto Serif', Georgia, serif;
+  letter-spacing: 0.01em;
+}
+.example-block-hanzi {
+  font-size: 17px; font-weight: 700; color: var(--dark);
+  line-height: 1.4; margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+.example-block-translations { display: flex; flex-direction: column; gap: 4px; }
+[data-theme="dark"] .example-block-pinyin { color: #94a3b8; }
+[data-theme="dark"] .example-block-hanzi  { color: #f1f5f9; }
+
 .example-translations {
   background: var(--bg); border-radius: var(--radius-sm); padding: 12px 14px; text-align: left;
 }
