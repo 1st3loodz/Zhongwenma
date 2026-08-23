@@ -2,9 +2,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initDb } from '../../../lib/db';
 import crypto from 'crypto';
 
-const PRIMARY_MODEL = "gemini-2.5-flash";
-const FALLBACK_MODEL = "gemini-2.5-flash-lite";
-const MAX_RETRIES = 3;
+// ── Model config ──────────────────────────────────────────────────────────────
+// gemini-2.5-flash      : latest high-capability model (primary)
+// gemini-2.5-flash-lite : faster / higher free-tier quota (fallback)
+const PRIMARY_MODEL  = 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
+const MAX_RETRIES    = 3;
 
 // Valid word types — used to sanitize Gemini output
 const VALID_WORD_TYPES = ['Noun', 'Verb', 'Adj', 'Adv', 'Phrase', 'Particle', 'Numeral', 'Pronoun', 'Other'];
@@ -60,22 +63,29 @@ async function callGeminiWithRetry(genAI, userInput) {
   const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    // Primary model for first N-1 attempts; fall back on final attempt
+    const modelName = attempt < MAX_RETRIES ? PRIMARY_MODEL : FALLBACK_MODEL;
+    if (attempt === MAX_RETRIES) {
+      console.warn(`[Gemini] Switching to fallback "${FALLBACK_MODEL}" after ${attempt - 1} failed attempt(s).`);
+    }
     try {
-      const modelName = attempt < MAX_RETRIES ? PRIMARY_MODEL : FALLBACK_MODEL;
-      if (attempt === MAX_RETRIES) {
-        console.warn(`[Gemini] Falling back to ${FALLBACK_MODEL} after ${attempt - 1} attempts.`);
-      }
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const model  = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent({ contents, generationConfig });
       return result.response.text();
     } catch (err) {
-      const isTransient = err.message?.includes('503') || err.message?.includes('429');
-      if (isTransient && attempt < MAX_RETRIES) {
-        const delayMs = 1000 * Math.pow(2, attempt - 1);
-        console.warn(`[Gemini] Attempt ${attempt} failed (transient). Retrying in ${delayMs}ms...`);
+      const msg         = err.message || '';
+      const isRateLimit = msg.includes('429') || msg.toLowerCase().includes('quota');
+      const isTransient = msg.includes('503') || msg.includes('502');
+
+      if ((isRateLimit || isTransient) && attempt < MAX_RETRIES) {
+        const delayMs = 1000 * Math.pow(2, attempt - 1); // 1s → 2s
+        console.warn(`[Gemini] Attempt ${attempt} on "${modelName}" failed (${isRateLimit ? 'rate-limit' : 'transient'}). Retrying in ${delayMs}ms…`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       } else {
-        throw err;
+        const friendly = isRateLimit
+          ? 'Gemini API rate limit reached — please wait a moment and try again.'
+          : `Gemini error (${modelName}): ${msg}`;
+        throw new Error(friendly);
       }
     }
   }

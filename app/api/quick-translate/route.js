@@ -45,8 +45,10 @@ export async function POST(request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Try models in order with exponential back-off ─────────────────────
-    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    // ── Model cascade: try in order, most capable → fastest ──────────────
+    // gemini-2.5-flash      : primary (best quality)
+    // gemini-2.5-flash-lite : fallback (higher free-tier quota)
+    const MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
     let lastError;
 
     for (const modelName of MODELS) {
@@ -72,8 +74,13 @@ export async function POST(request) {
 
         return NextResponse.json(parsed);
       } catch (err) {
-        lastError = err;
-        // Try next model
+        const msg         = err.message || '';
+        const isRateLimit = msg.includes('429') || msg.toLowerCase().includes('quota');
+        console.warn(`[quick-translate] Model "${modelName}" failed${isRateLimit ? ' (rate-limit)' : ''}: ${msg.slice(0, 120)}`);
+        lastError = isRateLimit
+          ? new Error('Gemini API rate limit reached — please wait a moment and try again.')
+          : err;
+        // Continue to next model
       }
     }
 
