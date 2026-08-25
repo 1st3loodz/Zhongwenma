@@ -3,10 +3,10 @@ import { initDb } from '../../../lib/db';
 import crypto from 'crypto';
 
 // ── Model config ──────────────────────────────────────────────────────────────
-// gemini-2.5-flash      : latest high-capability model (primary)
-// gemini-2.5-flash-lite : faster / higher free-tier quota (fallback)
-const PRIMARY_MODEL  = 'gemini-2.5-flash';
-const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
+// gemini-3.5-flash      : latest high-capability model (primary)
+// gemini-3.5-flash-lite : faster / higher free-tier quota (fallback)
+const PRIMARY_MODEL  = 'gemini-3.5-flash';
+const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
 const MAX_RETRIES    = 3;
 
 // Valid word types — used to sanitize Gemini output
@@ -40,7 +40,10 @@ async function callGeminiWithRetry(genAI, userInput) {
     - If the input functions as multiple parts of speech (e.g., both a Noun and a Verb), return separate entries for each type.
     - "translation_th" must be in Thai script.
     - "translation_en" must be in English.
-    - "pinyin" and "example_sentence_pinyin" must use standard Pinyin with tone marks (e.g. nǐ hǎo).
+    - "pinyin" and "example_sentence_pinyin" must use standard Unicode Pinyin with precomposed tone marks.
+    - CRITICAL for Pinyin: Use precomposed Unicode characters ONLY (e.g. ā á ǎ à, ē é ě è, ī í ǐ ì, ō ó ǒ ò, ū ú ǔ ù, ǖ ǘ ǚ ǜ).
+    - NEVER split a tone mark from its vowel with a space (e.g. "yo ˇ u" is WRONG; "yǒu" is CORRECT).
+    - Use exactly ONE space between syllables. No leading or trailing spaces. No double spaces.
     - "example_sentence_hanzi" must be the full Chinese sentence written in Hanzi characters.
     - "example_sentence_translation_en" must be the English translation of the example sentence.
     - "example_sentence_translation_th" must be the Thai translation of the example sentence.

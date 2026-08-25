@@ -26,8 +26,8 @@ export async function POST(request) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    // gemini-2.5-flash-lite: higher free-tier quota, ideal for batch backfill jobs
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    // gemini-3.5-flash-lite: higher free-tier quota, ideal for batch backfill jobs
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
 
     const results = [];
 

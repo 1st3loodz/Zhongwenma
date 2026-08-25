@@ -48,9 +48,9 @@ export async function POST(request) {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // ── Model cascade: try in order, most capable → fastest ──────────────
-    // gemini-2.5-flash      : primary (best quality)
-    // gemini-2.5-flash-lite : fallback (higher free-tier quota)
-    const MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    // gemini-3.5-flash      : primary (best quality)
+    // gemini-3.5-flash-lite : fallback (higher free-tier quota)
+    const MODELS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite'];
     let lastError;
 
     for (const modelName of MODELS) {
