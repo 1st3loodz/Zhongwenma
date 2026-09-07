@@ -252,6 +252,7 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
   // ── Setup config (local — user can re-pick on next session) ──────────
   const [wordCount, setWordCount]     = useState('10');
   const [weekFilter, setWeekFilter]   = useState('all');
+  const [hskFilter, setHskFilter]     = useState('all'); // 'all' | '1' | '2' | ... | '9'
   // 'unmastered' = only is_mastered=0|null, 'all' = every card
   const [masteryScope, setMasteryScope] = useState('unmastered');
 
@@ -299,11 +300,38 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
     setFlipKey(k => k + 1);
   };
 
-  // Pool respecting mastery scope
-  const scopedCards = useMemo(() =>
-    masteryScope === 'unmastered' ? allVocab.filter(c => !c.is_mastered) : allVocab,
-    [allVocab, masteryScope]
-  );
+  // HSK numeric levels in order — used for cumulative "≤ N" comparison
+  const HSK_ORDER = ['HSK 1','HSK 2','HSK 3','HSK 4','HSK 5','HSK 6','HSK 7','HSK 8','HSK 9'];
+  // Pill labels shown in setup
+  const HSK_PILLS = [
+    { value: 'all', label: 'All' },
+    { value: '1', label: 'HSK 1' },
+    { value: '2', label: '≤ HSK 2' },
+    { value: '3', label: '≤ HSK 3' },
+    { value: '4', label: '≤ HSK 4' },
+    { value: '5', label: '≤ HSK 5' },
+    { value: '6', label: '≤ HSK 6' },
+    { value: '9', label: '≤ HSK 9' },
+  ];
+
+  /** Apply cumulative HSK filter to a card array */
+  const applyHskFilter = useCallback((cards, filter) => {
+    if (filter === 'all') return cards;
+    const maxIndex = HSK_ORDER.indexOf(`HSK ${filter}`);
+    return cards.filter(c => {
+      if (!c.hsk_level || c.hsk_level === 'Non-HSK') return false;
+      const idx = HSK_ORDER.indexOf(c.hsk_level);
+      return idx >= 0 && idx <= maxIndex;
+    });
+  }, []);
+
+  // Pool respecting mastery scope + HSK filter
+  const scopedCards = useMemo(() => {
+    const byMastery = masteryScope === 'unmastered'
+      ? allVocab.filter(c => !c.is_mastered)
+      : allVocab;
+    return applyHskFilter(byMastery, hskFilter);
+  }, [allVocab, masteryScope, hskFilter, applyHskFilter]);
 
   // How many scoped cards match the current week filter (live preview)
   const matchingCount = useMemo(() => {
@@ -382,6 +410,22 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
           </p>
         ) : (
           <>
+            {/* ── HSK Level Filter ────────────────────────────────── */}
+            <div className="setup-field">
+              <label className="setup-label">HSK Level</label>
+              <div className="hsk-pill-row">
+                {HSK_PILLS.map(pill => (
+                  <button
+                    key={pill.value}
+                    className={`hsk-pill ${hskFilter === pill.value ? 'active' : ''}`}
+                    onClick={() => setHskFilter(pill.value)}
+                  >
+                    {pill.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* ── Word Scope toggle ──────────────────────────────── */}
             <div className="setup-field">
               <label className="setup-label">Word Scope</label>
@@ -443,11 +487,18 @@ function FlashcardsTab({ onReview, flashSession, setFlashSession }) {
                 <p>All words in this batch are mastered!</p>
                 <p className="setup-mastered-hint">Try selecting <strong>All Words</strong> or a different week.</p>
               </div>
+            ) : matchingCount === 0 && hskFilter !== 'all' ? (
+              <div className="setup-mastered-notice">
+                <span className="setup-mastered-icon">📭</span>
+                <p>No cards found for this HSK range.</p>
+                <p className="setup-mastered-hint">Try selecting a higher level or adding new words!</p>
+              </div>
             ) : (
               <div className="setup-pool-info">
                 <span className="setup-pool-count">{matchingCount}</span>
                 <span className="setup-pool-label">
-                  {matchingCount === 1 ? 'word' : 'words'} available in this period
+                  {matchingCount === 1 ? 'word' : 'words'} available
+                  {hskFilter !== 'all' ? ` · up to HSK ${hskFilter}` : ''}
                 </span>
               </div>
             )}
