@@ -775,13 +775,16 @@ function VocabBankTab() {
   useEffect(() => { loadVocab(); }, [loadVocab]);
 
   const handleHskSync = useCallback(async (mode = 'missing') => {
+    // Guard: if a DOM event or non-string slips through, fall back to default
+    const safeMode = (typeof mode === 'string' && (mode === 'all' || mode === 'missing'))
+      ? mode : 'missing';
     setHskSyncing(true);
     setHskSyncMsg('');
     try {
       const res = await fetch('/api/backfill-hsk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: 'zhongwenma-backfill-2026', mode }),
+        body: JSON.stringify({ secret: 'zhongwenma-backfill-2026', mode: safeMode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Backfill failed');
@@ -861,7 +864,7 @@ function VocabBankTab() {
           <span className="bank-count">{filtered.length} words</span>
           <button
             className="hsk-sync-btn"
-            onClick={handleHskSync}
+            onClick={() => handleHskSync('missing')}
             disabled={hskSyncing}
             title="Re-classify all words to HSK 3.0 standard"
           >
@@ -874,7 +877,7 @@ function VocabBankTab() {
       {needsHskSync && !hskSyncing && !hskSyncMsg && (
         <div className="hsk-sync-banner">
           ⚠️ Some words are missing HSK 3.0 levels.
-          <button className="hsk-sync-banner-btn" onClick={handleHskSync}>
+          <button className="hsk-sync-banner-btn" onClick={() => handleHskSync('missing')}>
             Sync Now
           </button>
         </div>
