@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initDb } from '../../../lib/db';
 
-const VALID_HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'Non-HSK'];
+const VALID_HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9', 'Non-HSK'];
 
 /**
  * POST /api/backfill-hsk
- * Backfills hsk_level for all vocab cards that are missing it.
+ * Backfills or re-syncs hsk_level for all vocab cards based on HSK 3.0.
  * Calls Gemini for each word — designed to be called once for the migration.
  * Protected by a secret key to prevent accidental re-runs.
  */
@@ -17,25 +17,30 @@ export async function POST(request) {
     }
 
     const db = await initDb();
+    // Re-evaluate ALL words for HSK 3.0 standard
     const words = await db.all(
-      `SELECT id, hanzi, pinyin FROM vocab_cards WHERE hsk_level IS NULL OR hsk_level = ''`
+      `SELECT id, hanzi, pinyin FROM vocab_cards`
     );
 
     if (words.length === 0) {
-      return Response.json({ message: 'All words already have HSK levels.', updated: 0 });
+      return Response.json({ message: 'No words to process.', updated: 0 });
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     // gemini-3.5-flash-lite: higher free-tier quota, ideal for batch backfill jobs
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash-lite' });
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-3.5-flash-lite',
+      generationConfig: { temperature: 0.1 } // High determinism
+    });
 
     const results = [];
 
     for (const word of words) {
       try {
-        const prompt = `Given the Chinese word "${word.hanzi}" (Pinyin: ${word.pinyin}), what is its HSK level?
+        const prompt = `Given the Chinese word "${word.hanzi}" (Pinyin: ${word.pinyin}), what is its HSK level according to the new HSK 3.0 standard?
+Note that HSK 1 under HSK 3.0 covers the expanded ~500 foundational daily words.
 Respond with ONLY one of these exact values and nothing else:
-HSK 1, HSK 2, HSK 3, HSK 4, HSK 5, HSK 6, Non-HSK`;
+HSK 1, HSK 2, HSK 3, HSK 4, HSK 5, HSK 6, HSK 7, HSK 8, HSK 9, Non-HSK`;
 
         const result = await model.generateContent(prompt);
         const rawLevel = result.response.text().trim();

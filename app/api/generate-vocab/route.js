@@ -28,15 +28,15 @@ async function callGeminiWithRetry(genAI, userInput) {
     4. Generate exactly ONE short, practical, daily-life conversational example sentence.
        - Provide it in TWO forms: full Pinyin (with tone marks) AND Chinese Hanzi characters.
     5. Translate that example sentence into BOTH English AND Thai.
-    6. Identify the HSK level of the word using EXACTLY one of these values:
-       HSK 1 | HSK 2 | HSK 3 | HSK 4 | HSK 5 | HSK 6 | Non-HSK
-       (Use "Non-HSK" if the word does not appear in the official HSK vocabulary lists)
+    6. Identify the HSK level of the word using EXACTLY one of these values based strictly on the new HSK 3.0 standard:
+       HSK 1 | HSK 2 | HSK 3 | HSK 4 | HSK 5 | HSK 6 | HSK 7 | HSK 8 | HSK 9 | Non-HSK
+       (Use "Non-HSK" if the word does not appear in the official HSK 3.0 vocabulary lists. Explicitly note that HSK 1 under HSK 3.0 covers the expanded ~500 foundational daily words).
 
     CRITICAL RULES:
     - Always respond with valid JSON only. No markdown, no code fences, no extra text.
     - All string values must be properly escaped UTF-8.
     - "word_type" must be exactly one of the values listed above.
-    - "hsk_level" must be exactly one of: HSK 1, HSK 2, HSK 3, HSK 4, HSK 5, HSK 6, Non-HSK
+    - "hsk_level" must be exactly one of: HSK 1, HSK 2, HSK 3, HSK 4, HSK 5, HSK 6, HSK 7, HSK 8, HSK 9, Non-HSK
     - If the input functions as multiple parts of speech (e.g., both a Noun and a Verb), return separate entries for each type.
     - "translation_th" must be in Thai script.
     - "translation_en" must be in English.
@@ -65,7 +65,7 @@ async function callGeminiWithRetry(genAI, userInput) {
     ]
   `;
 
-  const generationConfig = { responseMimeType: "application/json", temperature: 0.2 };
+  const generationConfig = { responseMimeType: "application/json", temperature: 0.1 };
   const contents = [{ role: "user", parts: [{ text: prompt }] }];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

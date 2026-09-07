@@ -76,6 +76,7 @@ function HskBadge({ level }) {
   const tier = level === 'HSK 1' || level === 'HSK 2' ? 'hsk-green'
     : level === 'HSK 3' || level === 'HSK 4' ? 'hsk-orange'
     : level === 'HSK 5' || level === 'HSK 6' ? 'hsk-purple'
+    : level === 'HSK 7' || level === 'HSK 8' || level === 'HSK 9' ? 'hsk-red'
     : 'hsk-gray'; // Non-HSK
   return <span className={`hsk-badge ${tier}`}>{level}</span>;
 }

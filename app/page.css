@@ -311,10 +311,12 @@ body {
 .hsk-green  { background: #DCFCE7; color: #15803D; }  /* HSK 1-2 */
 .hsk-orange { background: #FFF7ED; color: #C2410C; }  /* HSK 3-4 */
 .hsk-purple { background: #F3E8FF; color: #7E22CE; }  /* HSK 5-6 */
+.hsk-red    { background: #FEE2E2; color: #B91C1C; }  /* HSK 7-9 */
 .hsk-gray   { background: #F1F5F9; color: #64748B; }  /* Non-HSK */
 [data-theme="dark"] .hsk-green  { background: #052e16; color: #4ade80; }
 [data-theme="dark"] .hsk-orange { background: #271400; color: #fb923c; }
 [data-theme="dark"] .hsk-purple { background: #2e1065; color: #c084fc; }
+[data-theme="dark"] .hsk-red    { background: #450a0a; color: #f87171; }
 [data-theme="dark"] .hsk-gray   { background: #1e293b; color: #94a3b8; }
 
 /* ─── Add Words Tab ───────────────────────────────────────────────── */
