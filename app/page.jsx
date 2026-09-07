@@ -775,33 +775,70 @@ function VocabBankTab() {
   useEffect(() => { loadVocab(); }, [loadVocab]);
 
   const handleHskSync = useCallback(async (mode = 'missing') => {
-    // Guard: if a DOM event or non-string slips through, fall back to default
     const safeMode = (typeof mode === 'string' && (mode === 'all' || mode === 'missing'))
       ? mode : 'missing';
+    
     setHskSyncing(true);
     setHskSyncMsg('');
+    
+    // 1. Identify which words need syncing
+    let targetWords = allWords;
+    if (safeMode === 'missing') {
+      targetWords = allWords.filter(w => !w.hsk_level || w.hsk_level === '' || w.hsk_level === 'Non-HSK' || w.hsk_level === 'Uncategorized');
+    }
+    
+    if (targetWords.length === 0) {
+      setHskSyncMsg('✓ All words are already synced.');
+      setHskSyncing(false);
+      setNeedsHskSync(false);
+      return;
+    }
+
+    // 2. Process in chunks of 5
+    const CHUNK_SIZE = 5;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    let totalErrors  = 0;
+    
     try {
-      const res = await fetch('/api/backfill-hsk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: 'zhongwenma-backfill-2026', mode: safeMode }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Backfill failed');
-      const { updated = 0, skipped = 0, errors: errs = 0, total = 0 } = data;
-      const parts = [`✓ ${updated}/${total} words classified`];
-      if (skipped > 0) parts.push(`${skipped} skipped (kept existing)`);
-      if (errs > 0)    parts.push(`${errs} errors`);
+      for (let i = 0; i < targetWords.length; i += CHUNK_SIZE) {
+        const chunk = targetWords.slice(i, i + CHUNK_SIZE);
+        setHskSyncMsg(`Syncing: ${Math.min(i + CHUNK_SIZE, targetWords.length)} / ${targetWords.length}...`);
+        
+        const res = await fetch('/api/backfill-hsk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            secret: 'zhongwenma-backfill-2026', 
+            mode: safeMode,
+            wordIds: chunk.map(w => w.id) 
+          }),
+        });
+        
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Server ${res.status}: ${errText.slice(0, 100)}`);
+        }
+        
+        const data = await res.json();
+        totalUpdated += data.updated || 0;
+        totalSkipped += data.skipped || 0;
+        totalErrors  += data.errors || 0;
+      }
+      
+      const parts = [`✓ ${totalUpdated}/${targetWords.length} words classified`];
+      if (totalSkipped > 0) parts.push(`${totalSkipped} skipped`);
+      if (totalErrors > 0)  parts.push(`${totalErrors} errors`);
       setHskSyncMsg(parts.join(' · '));
       setNeedsHskSync(false);
-      // Reload to show updated badges
       await loadVocab();
+
     } catch (err) {
-      setHskSyncMsg(`⚠️ ${err.message}`);
+      setHskSyncMsg(`⚠️ Error at ${totalUpdated}/${targetWords.length}: ${err.message}`);
     } finally {
       setHskSyncing(false);
     }
-  }, [loadVocab]);
+  }, [allWords, loadVocab]);
 
   const filtered = useMemo(() => {
     let result = allWords;

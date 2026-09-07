@@ -54,14 +54,23 @@ export async function POST(request) {
 
     const db = await initDb();
 
-    // Build query based on mode
-    const query = mode === 'all'
-      ? `SELECT id, hanzi, pinyin, translation_en, hsk_level FROM vocab_cards ORDER BY id ASC`
-      : `SELECT id, hanzi, pinyin, translation_en, hsk_level FROM vocab_cards
-         WHERE hsk_level IS NULL OR hsk_level = '' OR hsk_level = 'Non-HSK'
-         ORDER BY id ASC`;
+    // Build query based on mode or explicit IDs
+    let query = '';
+    let params = [];
 
-    const words = await db.all(query);
+    if (body.wordIds && Array.isArray(body.wordIds) && body.wordIds.length > 0) {
+      const placeholders = body.wordIds.map(() => '?').join(',');
+      query = `SELECT id, hanzi, pinyin, translation_en, hsk_level FROM vocab_cards WHERE id IN (${placeholders}) ORDER BY id ASC`;
+      params = body.wordIds;
+    } else {
+      query = mode === 'all'
+        ? `SELECT id, hanzi, pinyin, translation_en, hsk_level FROM vocab_cards ORDER BY id ASC`
+        : `SELECT id, hanzi, pinyin, translation_en, hsk_level FROM vocab_cards
+           WHERE hsk_level IS NULL OR hsk_level = '' OR hsk_level = 'Non-HSK'
+           ORDER BY id ASC`;
+    }
+
+    const words = await db.all(query, params);
 
     if (words.length === 0) {
       return Response.json({ message: 'No words need updating.', updated: 0, skipped: 0 });
