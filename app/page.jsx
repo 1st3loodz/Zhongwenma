@@ -774,18 +774,22 @@ function VocabBankTab() {
 
   useEffect(() => { loadVocab(); }, [loadVocab]);
 
-  const handleHskSync = useCallback(async () => {
+  const handleHskSync = useCallback(async (mode = 'missing') => {
     setHskSyncing(true);
     setHskSyncMsg('');
     try {
       const res = await fetch('/api/backfill-hsk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: 'zhongwenma-backfill-2026' }),
+        body: JSON.stringify({ secret: 'zhongwenma-backfill-2026', mode }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Backfill failed');
-      setHskSyncMsg(`✓ ${data.updated ?? data.results?.length ?? 0} words synced to HSK 3.0`);
+      const { updated = 0, skipped = 0, errors: errs = 0, total = 0 } = data;
+      const parts = [`✓ ${updated}/${total} words classified`];
+      if (skipped > 0) parts.push(`${skipped} skipped (kept existing)`);
+      if (errs > 0)    parts.push(`${errs} errors`);
+      setHskSyncMsg(parts.join(' · '));
       setNeedsHskSync(false);
       // Reload to show updated badges
       await loadVocab();
