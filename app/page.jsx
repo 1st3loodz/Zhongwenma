@@ -680,6 +680,11 @@ function VocabBankTab() {
   const [search, setSearch]             = useState('');
   const [selectedCard, setSelectedCard] = useState(null);
 
+  // HSK Sync
+  const [hskSyncing, setHskSyncing]   = useState(false);
+  const [hskSyncMsg, setHskSyncMsg]   = useState('');
+  const [needsHskSync, setNeedsHskSync] = useState(false);
+
   // Pagination & Filters
   const [page, setPage]                 = useState(1);
   const [pageSize, setPageSize]         = useState(15);
@@ -700,20 +705,45 @@ function VocabBankTab() {
     )].sort((a, b) => a - b);
   }, [allWords, firstCardDate]);
 
-  useEffect(() => {
-    async function load() {
-      setIsLoading(true);
-      try {
-        const res = await fetch('/api/get-all-vocab');
-        if (res.ok) {
-          const data = await res.json();
-          setAllWords(data.map(normaliseCard));
-        }
-      } catch (err) { console.error('Failed to load vocab bank:', err); }
-      finally { setIsLoading(false); }
-    }
-    load();
+  const loadVocab = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/get-all-vocab');
+      if (res.ok) {
+        const data = await res.json();
+        const cards = data.map(normaliseCard);
+        setAllWords(cards);
+        // Auto-detect if any words are missing HSK level
+        const missing = cards.filter(w => !w.hsk_level || w.hsk_level === 'Uncategorized');
+        setNeedsHskSync(missing.length > 0);
+      }
+    } catch (err) { console.error('Failed to load vocab bank:', err); }
+    finally { setIsLoading(false); }
   }, []);
+
+  useEffect(() => { loadVocab(); }, [loadVocab]);
+
+  const handleHskSync = useCallback(async () => {
+    setHskSyncing(true);
+    setHskSyncMsg('');
+    try {
+      const res = await fetch('/api/backfill-hsk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: 'zhongwenma-backfill-2026' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Backfill failed');
+      setHskSyncMsg(`✓ ${data.updated ?? data.results?.length ?? 0} words synced to HSK 3.0`);
+      setNeedsHskSync(false);
+      // Reload to show updated badges
+      await loadVocab();
+    } catch (err) {
+      setHskSyncMsg(`⚠️ ${err.message}`);
+    } finally {
+      setHskSyncing(false);
+    }
+  }, [loadVocab]);
 
   const filtered = useMemo(() => {
     let result = allWords;
@@ -772,8 +802,33 @@ function VocabBankTab() {
 
       <div className="bank-header">
         <h3>📚 Vocab Bank</h3>
-        <span className="bank-count">{filtered.length} words</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="bank-count">{filtered.length} words</span>
+          <button
+            className="hsk-sync-btn"
+            onClick={handleHskSync}
+            disabled={hskSyncing}
+            title="Re-classify all words to HSK 3.0 standard"
+          >
+            {hskSyncing ? '⏳ Syncing…' : '🔄 Sync HSK'}
+          </button>
+        </div>
       </div>
+
+      {/* HSK missing-data banner */}
+      {needsHskSync && !hskSyncing && !hskSyncMsg && (
+        <div className="hsk-sync-banner">
+          ⚠️ Some words are missing HSK 3.0 levels.
+          <button className="hsk-sync-banner-btn" onClick={handleHskSync}>
+            Sync Now
+          </button>
+        </div>
+      )}
+      {hskSyncMsg && (
+        <div className={`hsk-sync-result ${hskSyncMsg.startsWith('✓') ? 'hsk-sync-ok' : 'hsk-sync-err'}`}>
+          {hskSyncMsg}
+        </div>
+      )}
 
       <div className="bank-controls">
         <input
